@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum QuestionType {
+  MCQ
+  SUBJECTIVE
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+  EXPIRED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum FlagType {
+  TAB_SWITCH
+  TIME_ANOMALY
+  SIMILARITY_MATCH
+  RAPID_GUESS
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         Role       @default(STUDENT)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  createdExams   Exam[]       @relation("TeacherExams")
+  attempts       Attempt[]    @relation("StudentAttempts")
+  issuedInvites  Invite[]     @relation("AdminInvites")
+  auditLogs      AuditLog[]   @relation("UserAuditLogs")
+  integrityFlags Flag[]       @relation("StudentFlags")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Invite {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  role        Role         @default(STUDENT)
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  expiresAt   DateTime
+  invitedById String
+  invitedBy   User         @relation("AdminInvites", fields: [invitedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([token])
+  @@index([email])
+}
+
+model Topic {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  parentId    String?
+  parent      Topic?     @relation("TopicHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subtopics   Topic[]    @relation("TopicHierarchy")
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([name])
+}
+
+model Exam {
+  id              String      @id @default(uuid())
+  title           String
+  description     String?
+  durationMinutes Int
+  startTime       DateTime?
+  endTime         DateTime?
+  isPublished     Boolean     @default(false)
+  isAdaptive      Boolean     @default(false)
+  teacherId       String
+  teacher         User        @relation("TeacherExams", fields: [teacherId], references: [id], onDelete: Cascade)
+  questions       Question[]
+  attempts        Attempt[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([teacherId])
+  @@index([isPublished])
+}
+
+model Question {
+  id            String          @id @default(uuid())
+  examId        String
+  exam          Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  topicId       String?
+  topic         Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  text          String
+  type          QuestionType    @default(MCQ)
+  options       Json?           // Array of string options for MCQ
+  correctAnswer String?         // Correct option or answer key
+  rubric        String?         // Rubric criteria for AI/manual subjective grading
+  difficulty    DifficultyLevel @default(MEDIUM)
+  points        Float           @default(1.0)
+  orderIndex    Int             @default(0)
+  answers       Answer[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([examId])
+  @@index([topicId])
+  @@index([difficulty])
+}
+
+model Attempt {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         User          @relation("StudentAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  examId          String
+  exam            Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  status          AttemptStatus @default(IN_PROGRESS)
+  startedAt       DateTime      @default(now())
+  submittedAt     DateTime?
+  score           Float?
+  totalPoints     Float?
+  answers         Answer[]
+  flags           Flag[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([studentId, examId])
+  @@index([studentId])
+  @@index([examId])
+  @@index([status])
+}
+
+model Answer {
+  id               String    @id @default(uuid())
+  attemptId        String
+  attempt          Attempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswer   String?   // For MCQ
+  textAnswer       String?   // For Subjective
+  aiScore          Float?
+  teacherScore     Float?
+  finalScore       Float?
+  timeSpentSeconds Int       @default(0)
+  changeCount      Int       @default(0)
+  isFlagged        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@index([questionId])
+}
+
+model Flag {
+  id        String    @id @default(uuid())
+  attemptId String
+  attempt   Attempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User      @relation("StudentFlags", fields: [studentId], references: [id], onDelete: Cascade)
+  flagType  FlagType
+  details   Json?
+  createdAt DateTime  @default(now())
+
+  @@index([attemptId])
+  @@index([studentId])
+  @@index([flagType])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}

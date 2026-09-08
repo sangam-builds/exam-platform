@@ -46,3 +46,9 @@ Thumbs.db
 
 # Misc
 *.tsbuildinfo
+
+# Internal Guides & Blueprints
+REPO_OPERATIONS_GUIDE.md
+FILE_REFERENCE.md
+BUILD_SEQUENCE_GUIDE.md
+
