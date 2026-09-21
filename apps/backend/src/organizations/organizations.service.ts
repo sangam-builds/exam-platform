@@ -377,4 +377,40 @@ export class OrganizationsService {
 
     return { success: true, id: userId };
   }
+
+  async toggleMemberStatus(
+    orgId: string,
+    userId: string,
+    isActive?: boolean,
+  ): Promise<{ id: string; isActive: boolean; name: string; email: string }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      throw new NotFoundException(`Organization with ID ${orgId} not found.`);
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Member with ID ${userId} not found in this organization.`);
+    }
+
+    const nextStatus = typeof isActive === 'boolean' ? isActive : !user.isActive;
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: nextStatus },
+    });
+
+    return {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      isActive: updatedUser.isActive,
+    };
+  }
 }

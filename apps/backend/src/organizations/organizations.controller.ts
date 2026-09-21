@@ -93,4 +93,14 @@ export class OrganizationsController {
   ) {
     return this.organizationsService.deleteMember(id, userId);
   }
+
+  @Patch(':id/users/:userId/status')
+  @Roles(Role.ADMIN)
+  toggleMemberStatus(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() body: { isActive?: boolean },
+  ) {
+    return this.organizationsService.toggleMemberStatus(id, userId, body?.isActive);
+  }
 }

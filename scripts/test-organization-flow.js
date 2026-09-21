@@ -40,6 +40,46 @@ function post(path, data, token) {
   });
 }
 
+function patch(path, data, token) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(data);
+    const headers = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData),
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const req = http.request(
+      {
+        hostname: 'localhost',
+        port: 4000,
+        path: `/api${path}`,
+        method: 'PATCH',
+        headers,
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk) => (body += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            if (res.statusCode >= 400) {
+              reject(new Error(`[${res.statusCode}] ` + (parsed.message || body)));
+            } else {
+              resolve(parsed);
+            }
+          } catch (e) {
+            resolve(body);
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
 function get(path, token) {
   return new Promise((resolve, reject) => {
     const headers = {};
@@ -218,8 +258,38 @@ async function run() {
     });
     console.log(`✅ Login with new regenerated password verified! Role=${newLogin.user.role}\n`);
 
-    // 10. Test Delete Member from Organization
-    console.log(`🔟 Testing Delete Member from Organization (${teacherCred.email})...`);
+    // 10. Test Deactivate & Reactivate Member
+    console.log(`🔟 Testing Deactivate & Reactivate Member (${sampleStudent.email})...`);
+    const deactRes = await patch(`/organizations/${orgId}/users/${sampleStudent.id}/status`, { isActive: false }, adminToken);
+    console.log(`✅ User deactivated: isActive=${deactRes.isActive}`);
+
+    // Verify deactivated user cannot log in
+    let deactLoginFailed = false;
+    try {
+      await post('/auth/login', {
+        email: sampleStudent.email,
+        password: resetRes.rawPassword,
+      });
+    } catch (e) {
+      deactLoginFailed = true;
+    }
+    if (!deactLoginFailed) {
+      throw new Error(`Deactivated user should NOT be able to log in!`);
+    }
+    console.log(`✅ Verified deactivated user blocked from logging in.`);
+
+    // Reactivate user
+    const reactRes = await patch(`/organizations/${orgId}/users/${sampleStudent.id}/status`, { isActive: true }, adminToken);
+    console.log(`✅ User reactivated: isActive=${reactRes.isActive}`);
+
+    const reactLogin = await post('/auth/login', {
+      email: sampleStudent.email,
+      password: resetRes.rawPassword,
+    });
+    console.log(`✅ Reactivated user successfully logged in! Role=${reactLogin.user.role}\n`);
+
+    // 11. Test Delete Member from Organization
+    console.log(`1️⃣1️⃣ Testing Delete Member from Organization (${teacherCred.email})...`);
     const deleteRes = await del(`/organizations/${orgId}/users/${teacherCred.id}`, adminToken);
     console.log(`✅ Member deleted successfully: ID=${deleteRes.id}`);
 

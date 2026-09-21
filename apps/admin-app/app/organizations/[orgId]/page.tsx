@@ -42,6 +42,7 @@ export default function OrganizationDetailPage() {
   const [resetModalData, setResetModalData] = useState<GeneratedUserCredential | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
 
   const loadOrg = async () => {
     if (!orgId) return;
@@ -136,6 +137,30 @@ export default function OrganizationDetailPage() {
       alert(err.response?.data?.message || 'Failed to delete member');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggleStatus = async (member: OrgDetailMember) => {
+    const actionName = member.isActive ? 'deactivate' : 'activate';
+    if (member.isActive && !confirm(`Are you sure you want to deactivate "${member.name}"? They will not be able to log in until reactivated.`)) {
+      return;
+    }
+
+    try {
+      setTogglingStatusId(member.id);
+      const res = await api.organizations.toggleMemberStatus(orgId, member.id);
+      setOrg((prev) => {
+        if (!prev || !prev.users) return prev;
+        return {
+          ...prev,
+          users: prev.users.map((u) => (u.id === member.id ? { ...u, isActive: res.isActive } : u)),
+        };
+      });
+    } catch (err: any) {
+      console.error(`Failed to ${actionName} member:`, err);
+      alert(err.response?.data?.message || `Failed to ${actionName} member`);
+    } finally {
+      setTogglingStatusId(null);
     }
   };
 
@@ -390,16 +415,30 @@ export default function OrganizationDetailPage() {
                               </div>
                             </td>
 
+                            {/* Status Column with Interactive Activate/Deactivate Toggle */}
                             <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(member)}
+                                disabled={togglingStatusId === member.id}
+                                title={member.isActive ? 'Click to Deactivate user' : 'Click to Activate user'}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer border ${
                                   member.isActive
-                                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800'
-                                    : 'bg-rose-950/40 text-rose-400 border border-rose-800'
+                                    ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/80 hover:bg-rose-950/50 hover:text-rose-300 hover:border-rose-700'
+                                    : 'bg-rose-950/40 text-rose-300 border-rose-800/80 hover:bg-emerald-950/50 hover:text-emerald-300 hover:border-emerald-700'
                                 }`}
                               >
-                                {member.isActive ? 'Active' : 'Disabled'}
-                              </span>
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${
+                                    member.isActive ? 'bg-emerald-400' : 'bg-rose-400'
+                                  }`}
+                                />
+                                {togglingStatusId === member.id
+                                  ? 'Updating...'
+                                  : member.isActive
+                                  ? 'Active'
+                                  : 'Disabled'}
+                              </button>
                             </td>
 
                             <td className="px-6 py-4 text-right">

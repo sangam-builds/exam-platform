@@ -68,4 +68,16 @@ export const createOrganizationEndpoints = (client: AxiosInstance) => ({
     );
     return data;
   },
+
+  toggleMemberStatus: async (
+    orgId: string,
+    userId: string,
+    isActive?: boolean,
+  ): Promise<{ id: string; isActive: boolean; name: string; email: string }> => {
+    const { data } = await client.patch<{ id: string; isActive: boolean; name: string; email: string }>(
+      `/organizations/${orgId}/users/${userId}/status`,
+      { isActive },
+    );
+    return data;
+  },
 });
