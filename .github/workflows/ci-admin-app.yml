@@ -36,5 +36,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
       - name: Build Admin App
         run: npm run --workspace=@exam-platform/admin-app build
