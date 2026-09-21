@@ -84,4 +84,13 @@ export class OrganizationsController {
   ) {
     return this.organizationsService.resetMemberPassword(id, userId);
   }
+
+  @Delete(':id/users/:userId')
+  @Roles(Role.ADMIN)
+  deleteMember(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.organizationsService.deleteMember(id, userId);
+  }
 }

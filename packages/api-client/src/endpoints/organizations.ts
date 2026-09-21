@@ -58,4 +58,14 @@ export const createOrganizationEndpoints = (client: AxiosInstance) => ({
     );
     return data;
   },
+
+  deleteMember: async (
+    orgId: string,
+    userId: string,
+  ): Promise<{ success: boolean; id: string }> => {
+    const { data } = await client.delete<{ success: boolean; id: string }>(
+      `/organizations/${orgId}/users/${userId}`,
+    );
+    return data;
+  },
 });

@@ -41,6 +41,7 @@ export default function OrganizationDetailPage() {
   // Password reset states
   const [resetModalData, setResetModalData] = useState<GeneratedUserCredential | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadOrg = async () => {
     if (!orgId) return;
@@ -107,6 +108,34 @@ export default function OrganizationDetailPage() {
       alert(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setResettingId(null);
+    }
+  };
+
+  const handleDeleteMember = async (member: OrgDetailMember) => {
+    if (!confirm(`Are you sure you want to permanently delete "${member.name}" (${member.email}) from this organization?`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(member.id);
+      await api.organizations.deleteMember(orgId, member.id);
+      setOrg((prev) => {
+        if (!prev || !prev.users) return prev;
+        const updatedUsers = prev.users.filter((u) => u.id !== member.id);
+        const teachersCount = updatedUsers.filter((u) => u.role === 'TEACHER').length;
+        const studentsCount = updatedUsers.filter((u) => u.role === 'STUDENT').length;
+        return {
+          ...prev,
+          users: updatedUsers,
+          teachersCount,
+          studentsCount,
+        };
+      });
+    } catch (err: any) {
+      console.error('Failed to delete member:', err);
+      alert(err.response?.data?.message || 'Failed to delete member');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -374,14 +403,25 @@ export default function OrganizationDetailPage() {
                             </td>
 
                             <td className="px-6 py-4 text-right">
-                              <Button
-                                variant="outline"
-                                isLoading={resettingId === member.id}
-                                onClick={() => handleResetPassword(member)}
-                                className="text-[11px] h-7 px-2.5 border-slate-700 bg-slate-950 hover:bg-slate-800 text-slate-300"
-                              >
-                                🔄 Reset
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  isLoading={resettingId === member.id}
+                                  onClick={() => handleResetPassword(member)}
+                                  className="text-[11px] h-7 px-2.5 border-slate-700 bg-slate-950 hover:bg-slate-800 text-slate-300"
+                                >
+                                  🔄 Reset
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  isLoading={deletingId === member.id}
+                                  onClick={() => handleDeleteMember(member)}
+                                  className="text-[11px] h-7 px-2.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-800 text-rose-300"
+                                  title="Delete Member"
+                                >
+                                  🗑️
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );

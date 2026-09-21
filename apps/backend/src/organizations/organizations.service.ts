@@ -350,4 +350,31 @@ export class OrganizationsService {
       credentials,
     };
   }
+
+  async deleteMember(
+    orgId: string,
+    userId: string,
+  ): Promise<{ success: boolean; id: string }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      throw new NotFoundException(`Organization with ID ${orgId} not found.`);
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Member with ID ${userId} not found in this organization.`);
+    }
+
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { success: true, id: userId };
+  }
 }

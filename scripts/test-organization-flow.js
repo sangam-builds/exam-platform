@@ -70,6 +70,41 @@ function get(path, token) {
   });
 }
 
+function del(path, token) {
+  return new Promise((resolve, reject) => {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const req = http.request(
+      {
+        hostname: 'localhost',
+        port: 4000,
+        path: `/api${path}`,
+        method: 'DELETE',
+        headers,
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk) => (body += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            if (res.statusCode >= 400) {
+              reject(new Error(`[${res.statusCode}] ` + (parsed.message || body)));
+            } else {
+              resolve(parsed);
+            }
+          } catch (e) {
+            resolve(body);
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 async function run() {
   console.log('🚀 Starting Organization & Credential Flow Verification...\n');
 
@@ -181,7 +216,35 @@ async function run() {
       email: sampleStudent.email,
       password: resetRes.rawPassword,
     });
-    console.log(`✅ Login with new regenerated password verified! Role=${newLogin.user.role}`);
+    console.log(`✅ Login with new regenerated password verified! Role=${newLogin.user.role}\n`);
+
+    // 10. Test Delete Member from Organization
+    console.log(`🔟 Testing Delete Member from Organization (${teacherCred.email})...`);
+    const deleteRes = await del(`/organizations/${orgId}/users/${teacherCred.id}`, adminToken);
+    console.log(`✅ Member deleted successfully: ID=${deleteRes.id}`);
+
+    // Verify member is removed from roster
+    const updatedOrgDetail = await get(`/organizations/${orgId}`, adminToken);
+    const memberStillExists = updatedOrgDetail.users.some((u) => u.id === teacherCred.id);
+    if (memberStillExists) {
+      throw new Error(`Deleted teacher still appears in organization roster!`);
+    }
+    console.log(`✅ Verified member is removed from roster. New Total Members=${updatedOrgDetail.users?.length}`);
+
+    // Verify deleted member cannot log in
+    let deletedLoginFailed = false;
+    try {
+      await post('/auth/login', {
+        email: teacherCred.email,
+        password: teacherCred.rawPassword,
+      });
+    } catch (e) {
+      deletedLoginFailed = true;
+    }
+    if (!deletedLoginFailed) {
+      throw new Error(`Deleted user should not be able to log in!`);
+    }
+    console.log(`✅ Verified deleted user can no longer authenticate.`);
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🎉 ALL BACKEND, DATABASE & FRONTEND INTEGRATIONS VERIFIED!');
