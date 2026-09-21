@@ -9,7 +9,10 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "db:seed": "npm run seed --workspace=@exam-platform/backend",
+    "db:migrate": "npm run prisma:migrate --workspace=@exam-platform/backend",
+    "db:generate": "npm run prisma:generate --workspace=@exam-platform/backend"
   },
   "devDependencies": {
     "turbo": "^1.12.4",
