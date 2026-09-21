@@ -12,8 +12,11 @@ export class UsersController {
 
   @Get()
   @Roles(Role.ADMIN)
-  async findAll(@Query('role') role?: Role) {
-    return this.usersService.findAll(role);
+  async findAll(
+    @Query('role') role?: Role,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAll(role, search);
   }
 
   @Get(':id')

@@ -6,9 +6,19 @@ import { Role } from '@prisma/client';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(role?: Role) {
+  async findAll(role?: Role, search?: string) {
     return this.prisma.user.findMany({
-      where: role ? { role } : undefined,
+      where: {
+        ...(role ? { role } : {}),
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         email: true,
