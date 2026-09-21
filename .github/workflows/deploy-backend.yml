@@ -1,0 +1,22 @@
+name: Deploy Backend (Staging)
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Backend to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Echo Deploy Notice
+        run: echo "Backend staging deployment pipeline ready."

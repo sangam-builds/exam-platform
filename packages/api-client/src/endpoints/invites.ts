@@ -10,6 +10,10 @@ export const createInviteEndpoints = (client: AxiosInstance) => ({
     const { data } = await client.get<ValidateInviteResponse>(`/invites/validate/${token}`);
     return data;
   },
+  validateToken: async (token: string): Promise<ValidateInviteResponse> => {
+    const { data } = await client.get<ValidateInviteResponse>(`/invites/validate/${token}`);
+    return data;
+  },
   redeemInvite: async (dto: RedeemInviteDto): Promise<AuthResponse> => {
     const { data } = await client.post<AuthResponse>('/invites/redeem', dto);
     return data;

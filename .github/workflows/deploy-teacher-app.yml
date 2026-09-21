@@ -1,0 +1,22 @@
+name: Deploy Teacher App (Staging)
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/teacher-app/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-teacher-app.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Teacher App to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Echo Deploy Notice
+        run: echo "Teacher App staging deployment pipeline ready."
