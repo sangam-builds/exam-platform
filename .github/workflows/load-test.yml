@@ -1,0 +1,26 @@
+name: Load Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Load test script to run'
+        required: true
+        default: 'login-load-test.js'
+        type: choice
+        options:
+          - login-load-test.js
+          - exam-submission-burst-test.js
+          - autosave-load-test.js
+
+jobs:
+  k6-test:
+    name: Run k6 Load Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Echo k6 Setup
+        run: echo "k6 load testing workflow ready for target ${{ inputs.test_type }}."

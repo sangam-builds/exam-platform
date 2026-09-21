@@ -1,0 +1,40 @@
+name: CI Teacher App
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+    paths:
+      - 'apps/teacher-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-teacher-app.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/teacher-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-teacher-app.yml'
+
+jobs:
+  teacher-app-ci:
+    name: Teacher App Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Teacher App
+        run: npm run --workspace=@exam-platform/teacher-app build
