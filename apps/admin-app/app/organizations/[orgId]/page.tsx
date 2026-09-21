@@ -3,16 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/common/Header';
-import { Card, Button, Badge } from '@exam-platform/ui';
+import { Card, Button, Badge, Modal } from '@exam-platform/ui';
 import CreateOrgUserModal from '../../../components/organizations/CreateOrgUserModal';
 import { api, getStoredUser } from '../../../lib/apiClient';
-import { OrganizationWithStats } from '@exam-platform/shared-types';
+import { OrganizationWithStats, GeneratedUserCredential } from '@exam-platform/shared-types';
 
 interface OrgDetailMember {
   id: string;
   name: string;
   email: string;
   role: string;
+  initialPassword?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -31,6 +32,15 @@ export default function OrganizationDetailPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'TEACHER' | 'STUDENT'>('all');
   const [search, setSearch] = useState('');
   const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+
+  // Password visibility states
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [showAllPasswords, setShowAllPasswords] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Password reset states
+  const [resetModalData, setResetModalData] = useState<GeneratedUserCredential | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   const loadOrg = async () => {
     if (!orgId) return;
@@ -53,6 +63,52 @@ export default function OrganizationDetailPage() {
     }
     loadOrg();
   }, [orgId, router]);
+
+  const togglePassword = (memberId: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [memberId]: !prev[memberId],
+    }));
+  };
+
+  const toggleAllPasswords = () => {
+    const nextState = !showAllPasswords;
+    setShowAllPasswords(nextState);
+    if (org?.users) {
+      const updated: Record<string, boolean> = {};
+      org.users.forEach((u) => {
+        updated[u.id] = nextState;
+      });
+      setVisiblePasswords(updated);
+    }
+  };
+
+  const copyPassword = (id: string, text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleResetPassword = async (member: OrgDetailMember) => {
+    if (!confirm(`Are you sure you want to regenerate an 8-character password for ${member.name} (${member.email})?`)) {
+      return;
+    }
+
+    try {
+      setResettingId(member.id);
+      const result = await api.organizations.resetMemberPassword(orgId, member.id);
+      setResetModalData(result);
+      await loadOrg();
+      // Auto-show the newly generated password
+      setVisiblePasswords((prev) => ({ ...prev, [member.id]: true }));
+    } catch (err: any) {
+      console.error('Failed to reset password:', err);
+      alert(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setResettingId(null);
+    }
+  };
 
   const members = org?.users || [];
   const filteredMembers = members.filter((m) => {
@@ -162,8 +218,8 @@ export default function OrganizationDetailPage() {
             {/* Member Roster Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
               {/* Controls bar */}
-              <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
+              <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setActiveTab('all')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -196,14 +252,24 @@ export default function OrganizationDetailPage() {
                   </button>
                 </div>
 
-                <div className="max-w-xs w-full">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name or email..."
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={toggleAllPasswords}
+                    className="text-xs h-8 px-3 border-slate-700 bg-slate-950 text-slate-300 hover:text-white"
+                  >
+                    {showAllPasswords ? '🙈 Hide Passwords' : '👁️ Show All Passwords'}
+                  </Button>
+
+                  <div className="max-w-xs w-full">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search name or email..."
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -233,44 +299,93 @@ export default function OrganizationDetailPage() {
                         <th className="px-6 py-3.5">Name</th>
                         <th className="px-6 py-3.5">Login Email</th>
                         <th className="px-6 py-3.5">Role</th>
+                        <th className="px-6 py-3.5">Password</th>
                         <th className="px-6 py-3.5">Status</th>
-                        <th className="px-6 py-3.5">Created Date</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                      {filteredMembers.map((member) => (
-                        <tr key={member.id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="px-6 py-4 font-medium text-white">{member.name}</td>
-                          <td className="px-6 py-4 font-mono text-indigo-300 select-all">
-                            {member.email}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
-                                member.role === 'TEACHER'
-                                  ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-700/60'
-                                  : 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
-                              }`}
-                            >
-                              {member.role === 'TEACHER' ? '👨‍🏫 Teacher' : '🎓 Student'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                member.isActive
-                                  ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800'
-                                  : 'bg-rose-950/40 text-rose-400 border border-rose-800'
-                              }`}
-                            >
-                              {member.isActive ? 'Active' : 'Disabled'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-400">
-                            {new Date(member.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredMembers.map((member) => {
+                        const isVisible = visiblePasswords[member.id] || showAllPasswords;
+                        const pwd = member.initialPassword || 'Password123!';
+                        const isCopied = copiedId === member.id;
+
+                        return (
+                          <tr key={member.id} className="hover:bg-slate-800/20 transition-colors">
+                            <td className="px-6 py-4 font-medium text-white">{member.name}</td>
+                            <td className="px-6 py-4 font-mono text-indigo-300 select-all">
+                              {member.email}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                  member.role === 'TEACHER'
+                                    ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-700/60'
+                                    : 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
+                                }`}
+                              >
+                                {member.role === 'TEACHER' ? '👨‍🏫 Teacher' : '🎓 Student'}
+                              </span>
+                            </td>
+
+                            {/* Password Column with Show/Hide & Copy */}
+                            <td className="px-6 py-4">
+                              <div className="inline-flex items-center gap-2 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg">
+                                <code
+                                  className={`font-mono font-bold select-all ${
+                                    isVisible ? 'text-amber-300' : 'text-slate-500 tracking-widest'
+                                  }`}
+                                >
+                                  {isVisible ? pwd : '••••••••'}
+                                </code>
+
+                                <button
+                                  type="button"
+                                  onClick={() => togglePassword(member.id)}
+                                  title={isVisible ? 'Hide Password' : 'Show Password'}
+                                  className="text-slate-400 hover:text-white transition-colors p-0.5"
+                                >
+                                  {isVisible ? '🙈' : '👁️'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => copyPassword(member.id, pwd)}
+                                  title="Copy Password"
+                                  className={`transition-colors p-0.5 text-xs ${
+                                    isCopied ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  {isCopied ? '✓' : '📋'}
+                                </button>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                  member.isActive
+                                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800'
+                                    : 'bg-rose-950/40 text-rose-400 border border-rose-800'
+                                }`}
+                              >
+                                {member.isActive ? 'Active' : 'Disabled'}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4 text-right">
+                              <Button
+                                variant="outline"
+                                isLoading={resettingId === member.id}
+                                onClick={() => handleResetPassword(member)}
+                                className="text-[11px] h-7 px-2.5 border-slate-700 bg-slate-950 hover:bg-slate-800 text-slate-300"
+                              >
+                                🔄 Reset
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -289,6 +404,60 @@ export default function OrganizationDetailPage() {
           orgSlug={org.slug}
           onSuccess={loadOrg}
         />
+      )}
+
+      {/* Reset Password Success Modal */}
+      {resetModalData && (
+        <Modal
+          isOpen={!!resetModalData}
+          onClose={() => setResetModalData(null)}
+          title="Password Reset Successful"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-950/60 border border-emerald-800 rounded-xl space-y-1">
+              <div className="flex items-center gap-2 text-emerald-300 font-semibold text-sm">
+                <span>✓</span> New 8-Character Password Generated!
+              </div>
+              <p className="text-xs text-slate-300">
+                The member can immediately use this new password to sign into their portal.
+              </p>
+            </div>
+
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-slate-500 block">Member Name</span>
+                <div className="text-sm font-semibold text-white">{resetModalData.name}</div>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-slate-500 block">Login Email</span>
+                <code className="text-xs font-mono text-indigo-300 select-all">{resetModalData.email}</code>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-slate-500 block">New Password</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="text-base font-mono font-bold text-amber-300 select-all bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+                    {resetModalData.rawPassword}
+                  </code>
+                  <Button
+                    variant="outline"
+                    className="h-9 text-xs"
+                    onClick={() => copyPassword('modal', resetModalData.rawPassword)}
+                  >
+                    {copiedId === 'modal' ? '✓ Copied' : '📋 Copy'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-800">
+              <Button variant="primary" onClick={() => setResetModalData(null)} className="text-xs">
+                Done
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

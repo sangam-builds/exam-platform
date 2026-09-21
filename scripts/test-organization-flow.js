@@ -160,10 +160,28 @@ async function run() {
 
     console.log(`✅ Student authentication verified! Role=${studentLogin.user.role}\n`);
 
-    // 8. Test Org Detail retrieval with Member Roster
+    // 8. Test Org Detail retrieval with Member Roster & Passwords
     console.log(`8️⃣ Fetching Organization Roster via Admin API...`);
     const orgDetail = await get(`/organizations/${orgId}`, adminToken);
     console.log(`✅ Org Detail retrieved: Name="${orgDetail.name}", Total Members=${orgDetail.users?.length}, Teachers=${orgDetail.teachersCount}, Students=${orgDetail.studentsCount}`);
+
+    const teacherInRoster = orgDetail.users.find((u) => u.email === teacherCred.email);
+    if (!teacherInRoster || !teacherInRoster.initialPassword) {
+      throw new Error(`Teacher in roster is missing initialPassword!`);
+    }
+    console.log(`✅ Admin can view member password in roster: ${teacherInRoster.email} -> "${teacherInRoster.initialPassword}"\n`);
+
+    // 9. Test Admin Reset / Regenerate Password for Member
+    console.log(`9️⃣ Testing Admin Password Reset for Student (${sampleStudent.email})...`);
+    const resetRes = await post(`/organizations/${orgId}/users/${sampleStudent.id}/reset-password`, {}, adminToken);
+    console.log(`✅ Password reset successfully! New Password: "${resetRes.rawPassword}"`);
+
+    // Verify login with new password
+    const newLogin = await post('/auth/login', {
+      email: sampleStudent.email,
+      password: resetRes.rawPassword,
+    });
+    console.log(`✅ Login with new regenerated password verified! Role=${newLogin.user.role}`);
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🎉 ALL BACKEND, DATABASE & FRONTEND INTEGRATIONS VERIFIED!');

@@ -48,4 +48,14 @@ export const createOrganizationEndpoints = (client: AxiosInstance) => ({
     const { data } = await client.post<BatchCreateOrgUsersResponse>(`/organizations/${orgId}/users/batch`, dto);
     return data;
   },
+
+  resetMemberPassword: async (
+    orgId: string,
+    userId: string,
+  ): Promise<GeneratedUserCredential> => {
+    const { data } = await client.post<GeneratedUserCredential>(
+      `/organizations/${orgId}/users/${userId}/reset-password`,
+    );
+    return data;
+  },
 });

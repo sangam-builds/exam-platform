@@ -61,6 +61,7 @@ model User {
   id             String        @id @default(uuid())
   email          String        @unique
   passwordHash   String
+  initialPassword String?
   name           String
   role           Role          @default(STUDENT)
   isActive       Boolean       @default(true)

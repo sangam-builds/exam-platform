@@ -61,12 +61,18 @@ async function main() {
           email: t.email,
           name: t.name,
           passwordHash,
+          initialPassword: 'Password123!',
           role: Role.TEACHER,
           organizationId: org.id,
           isActive: true,
         },
       });
       console.log(`✅ Seeded Teacher: ${teacher.name} (${teacher.email})`);
+    } else if (!teacher.initialPassword) {
+      teacher = await prisma.user.update({
+        where: { id: teacher.id },
+        data: { initialPassword: 'Password123!' },
+      });
     }
     if (!primaryTeacher) primaryTeacher = teacher;
   }
@@ -86,12 +92,18 @@ async function main() {
           email: s.email,
           name: s.name,
           passwordHash,
+          initialPassword: 'Password123!',
           role: Role.STUDENT,
           organizationId: org.id,
           isActive: true,
         },
       });
       console.log(`✅ Seeded Student: ${student.name} (${student.email})`);
+    } else if (!student.initialPassword) {
+      student = await prisma.user.update({
+        where: { id: student.id },
+        data: { initialPassword: 'Password123!' },
+      });
     }
   }
 

@@ -128,6 +128,7 @@ export class OrganizationsService {
             name: true,
             email: true,
             role: true,
+            initialPassword: true,
             isActive: true,
             createdAt: true,
           },
@@ -241,6 +242,7 @@ export class OrganizationsService {
         email,
         name: dto.name.trim(),
         passwordHash,
+        initialPassword: rawPassword,
         role: dto.role as any,
         organizationId: org.id,
         isActive: true,
@@ -252,6 +254,48 @@ export class OrganizationsService {
       name: user.name,
       email: user.email,
       role: user.role as any,
+      rawPassword,
+      organizationId: org.id,
+      organizationName: org.name,
+    };
+  }
+
+  async resetMemberPassword(
+    orgId: string,
+    userId: string,
+  ): Promise<GeneratedUserCredential> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!org) {
+      throw new NotFoundException(`Organization with ID ${orgId} not found.`);
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Member with ID ${userId} not found in this organization.`);
+    }
+
+    const rawPassword = this.generatePassword(8);
+    const passwordHash = await this.authService.hashPassword(rawPassword);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        initialPassword: rawPassword,
+      },
+    });
+
+    return {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role as any,
       rawPassword,
       organizationId: org.id,
       organizationName: org.name,

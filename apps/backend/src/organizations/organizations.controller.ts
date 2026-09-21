@@ -75,4 +75,13 @@ export class OrganizationsController {
   ) {
     return this.organizationsService.batchCreateUsersUnderOrg(id, batchDto);
   }
+
+  @Post(':id/users/:userId/reset-password')
+  @Roles(Role.ADMIN)
+  resetMemberPassword(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.organizationsService.resetMemberPassword(id, userId);
+  }
 }
