@@ -12,6 +12,8 @@ import {
   AttemptResult,
   AttemptStatus,
   StudentQuestion,
+  ExamAttendanceResponse,
+  StudentAttendanceRecord,
 } from '@exam-platform/shared-types';
 
 @Injectable()
@@ -42,6 +44,20 @@ export class AttemptsService {
 
     if (!exam.isPublished) {
       throw new ForbiddenException('This exam is not published yet');
+    }
+
+    // Check scheduled start and end times
+    const now = new Date();
+    if (exam.startTime && now < new Date(exam.startTime)) {
+      throw new ForbiddenException(
+        `This exam is scheduled to begin at ${new Date(exam.startTime).toLocaleString()}. You cannot start before this time.`,
+      );
+    }
+
+    if (exam.endTime && now > new Date(exam.endTime)) {
+      throw new ForbiddenException(
+        `This exam deadline passed on ${new Date(exam.endTime).toLocaleString()}.`,
+      );
     }
 
     // Check if attempt already exists
@@ -97,8 +113,8 @@ export class AttemptsService {
         status: attempt.status as AttemptStatus,
         startedAt: attempt.startedAt.toISOString(),
         submittedAt: attempt.submittedAt?.toISOString(),
-        score: attempt.score ?? undefined,
-        totalPoints: attempt.totalPoints ?? undefined,
+        score: undefined, // Hidden from student
+        totalPoints: undefined,
       },
       exam: {
         id: exam.id,
@@ -174,7 +190,8 @@ export class AttemptsService {
   }
 
   async submitAttempt(
-    studentId: string,
+    userId: string,
+    userRole: string,
     attemptId: string,
   ): Promise<AttemptResult> {
     const attempt = await this.prisma.attempt.findUnique({
@@ -182,11 +199,7 @@ export class AttemptsService {
       include: {
         exam: {
           include: {
-            questions: {
-              include: {
-                topic: true,
-              },
-            },
+            questions: true,
           },
         },
         answers: true,
@@ -197,12 +210,12 @@ export class AttemptsService {
       throw new NotFoundException('Attempt not found');
     }
 
-    if (attempt.studentId !== studentId) {
+    if (userRole === 'STUDENT' && attempt.studentId !== userId) {
       throw new ForbiddenException('You do not own this attempt');
     }
 
     if (attempt.status === 'SUBMITTED' || attempt.status === 'GRADED') {
-      return this.getAttemptResult(studentId, attemptId);
+      return this.getAttemptResult(userId, userRole, attemptId);
     }
 
     // Grade MCQs
@@ -243,17 +256,14 @@ export class AttemptsService {
       include: {
         exam: {
           include: {
-            questions: {
-              include: {
-                topic: true,
-              },
-            },
+            questions: true,
           },
         },
         answers: true,
       },
     });
 
+    const isStudent = userRole === 'STUDENT';
     const percentage =
       totalPoints > 0 ? Math.round((totalScore / totalPoints) * 100) : 0;
 
@@ -263,9 +273,9 @@ export class AttemptsService {
       examTitle: updatedAttempt.exam.title,
       studentId: updatedAttempt.studentId,
       status: updatedAttempt.status as AttemptStatus,
-      score: totalScore,
-      totalPoints,
-      percentage,
+      score: isStudent ? undefined : totalScore,
+      totalPoints: isStudent ? undefined : totalPoints,
+      percentage: isStudent ? undefined : percentage,
       startedAt: updatedAttempt.startedAt.toISOString(),
       submittedAt: (updatedAttempt.submittedAt || new Date()).toISOString(),
       totalQuestions: updatedAttempt.exam.questions.length,
@@ -276,7 +286,8 @@ export class AttemptsService {
   }
 
   async getAttemptResult(
-    studentId: string,
+    userId: string,
+    userRole: string,
     attemptId: string,
   ): Promise<AttemptResult> {
     const attempt = await this.prisma.attempt.findUnique({
@@ -295,10 +306,11 @@ export class AttemptsService {
       throw new NotFoundException('Attempt not found');
     }
 
-    if (attempt.studentId !== studentId) {
+    if (userRole === 'STUDENT' && attempt.studentId !== userId) {
       throw new ForbiddenException('Access denied');
     }
 
+    const isStudent = userRole === 'STUDENT';
     const score = attempt.score ?? 0;
     const totalPoints =
       attempt.totalPoints ??
@@ -313,9 +325,9 @@ export class AttemptsService {
       examTitle: attempt.exam.title,
       studentId: attempt.studentId,
       status: attempt.status as AttemptStatus,
-      score,
-      totalPoints,
-      percentage,
+      score: isStudent ? undefined : score,
+      totalPoints: isStudent ? undefined : totalPoints,
+      percentage: isStudent ? undefined : percentage,
       startedAt: attempt.startedAt.toISOString(),
       submittedAt: (attempt.submittedAt ?? new Date()).toISOString(),
       totalQuestions: attempt.exam.questions.length,
@@ -326,7 +338,8 @@ export class AttemptsService {
   }
 
   async getAttempt(
-    studentId: string,
+    userId: string,
+    userRole: string,
     attemptId: string,
   ): Promise<AttemptDetailResponse> {
     const attempt = await this.prisma.attempt.findUnique({
@@ -352,7 +365,7 @@ export class AttemptsService {
       throw new NotFoundException('Attempt not found');
     }
 
-    if (attempt.studentId !== studentId) {
+    if (userRole === 'STUDENT' && attempt.studentId !== userId) {
       throw new ForbiddenException('Access denied');
     }
 
@@ -379,8 +392,9 @@ export class AttemptsService {
         status: attempt.status as AttemptStatus,
         startedAt: attempt.startedAt.toISOString(),
         submittedAt: attempt.submittedAt?.toISOString(),
-        score: attempt.score ?? undefined,
-        totalPoints: attempt.totalPoints ?? undefined,
+        score: userRole === 'STUDENT' ? undefined : (attempt.score ?? undefined),
+        totalPoints:
+          userRole === 'STUDENT' ? undefined : (attempt.totalPoints ?? undefined),
       },
       exam: {
         id: attempt.exam.id,
@@ -405,13 +419,14 @@ export class AttemptsService {
   }
 
   async getAttemptByExam(
-    studentId: string,
+    userId: string,
+    userRole: string,
     examId: string,
   ): Promise<AttemptDetailResponse | null> {
     const attempt = await this.prisma.attempt.findUnique({
       where: {
         studentId_examId: {
-          studentId,
+          studentId: userId,
           examId,
         },
       },
@@ -421,7 +436,7 @@ export class AttemptsService {
       return null;
     }
 
-    return this.getAttempt(studentId, attempt.id);
+    return this.getAttempt(userId, userRole, attempt.id);
   }
 
   async findStudentAttempts(studentId: string) {
@@ -447,8 +462,110 @@ export class AttemptsService {
       status: a.status,
       startedAt: a.startedAt.toISOString(),
       submittedAt: a.submittedAt?.toISOString(),
-      score: a.score,
-      totalPoints: a.totalPoints,
+      score: undefined, // Hidden from student
+      totalPoints: undefined,
     }));
+  }
+
+  async getExamAttendance(
+    userId: string,
+    userRole: string,
+    examId: string,
+  ): Promise<ExamAttendanceResponse> {
+    const exam = await this.prisma.exam.findUnique({
+      where: { id: examId },
+      include: {
+        questions: {
+          select: { id: true, points: true },
+        },
+      },
+    });
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    if (userRole !== 'ADMIN' && exam.teacherId !== userId) {
+      throw new ForbiddenException('You do not have permission to view attendance for this exam');
+    }
+
+    const attempts = await this.prisma.attempt.findMany({
+      where: { examId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        answers: true,
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    const totalQuestions = exam.questions.length;
+    const totalPoints = exam.questions.reduce((sum, q) => sum + q.points, 0);
+
+    const students: StudentAttendanceRecord[] = attempts.map((att) => {
+      const timeSpentSeconds = att.answers.reduce(
+        (sum, a) => sum + (a.timeSpentSeconds || 0),
+        0,
+      );
+      const answeredCount = att.answers.filter(
+        (a) => a.selectedAnswer || a.textAnswer,
+      ).length;
+
+      const score = att.score ?? null;
+      const percentage =
+        score !== null && totalPoints > 0
+          ? Math.round((score / totalPoints) * 100)
+          : null;
+
+      return {
+        attemptId: att.id,
+        studentId: att.studentId,
+        studentName: att.student?.name || 'Unknown Student',
+        studentEmail: att.student?.email || 'N/A',
+        status: att.status as AttemptStatus,
+        startedAt: att.startedAt.toISOString(),
+        submittedAt: att.submittedAt?.toISOString() ?? null,
+        score,
+        totalPoints,
+        percentage,
+        answeredCount,
+        totalQuestions,
+        timeSpentSeconds,
+      };
+    });
+
+    const submittedStudents = students.filter((s) => s.status === 'SUBMITTED' || s.status === 'GRADED');
+    const inProgressStudents = students.filter((s) => s.status === 'IN_PROGRESS');
+
+    const totalSubmittedScore = submittedStudents.reduce(
+      (sum, s) => sum + (s.score ?? 0),
+      0,
+    );
+    const averageScore =
+      submittedStudents.length > 0
+        ? Math.round((totalSubmittedScore / submittedStudents.length) * 10) / 10
+        : null;
+
+    return {
+      exam: {
+        id: exam.id,
+        title: exam.title,
+        durationMinutes: exam.durationMinutes,
+        startTime: exam.startTime?.toISOString() ?? null,
+        endTime: exam.endTime?.toISOString() ?? null,
+        totalQuestions,
+        totalPoints,
+      },
+      totalAttended: students.length,
+      submittedCount: submittedStudents.length,
+      inProgressCount: inProgressStudents.length,
+      averageScore,
+      students,
+    };
   }
 }

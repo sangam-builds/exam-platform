@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '../../../../store/authStore';
 import { Header } from '../../../../components/common/Header';
+import { useScheduledCountdown } from '../../../../hooks/useScheduledCountdown';
 import { api } from '../../../../lib/apiClient';
 import { Exam } from '@exam-platform/shared-types';
 
@@ -50,8 +51,12 @@ export default function ExamInstructionsPage() {
     }
   }, [examId, isAuthenticated]);
 
+  const { isLocked, formattedCountdown } = useScheduledCountdown({
+    startTime: exam?.startTime,
+  });
+
   const handleStartExam = async () => {
-    if (!agreementChecked || isStarting) return;
+    if (!agreementChecked || isStarting || isLocked) return;
     setIsStarting(true);
     setError(null);
 
@@ -114,6 +119,44 @@ export default function ExamInstructionsPage() {
             {exam.title}
           </h1>
         </div>
+
+        {/* Scheduled Start Time Alert Banner */}
+        {isLocked && (
+          <div className="p-5 bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-amber-200">
+                  Scheduled Examination
+                </h3>
+                <p className="text-xs text-amber-300/80 mt-0.5">
+                  This test is set to open at{' '}
+                  <strong className="text-amber-200">
+                    {new Date(exam.startTime!).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    ({new Date(exam.startTime!).toLocaleDateString()})
+                  </strong>
+                  .
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 border border-amber-500/30 rounded-xl px-4 py-2 text-center self-start sm:self-auto">
+              <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">
+                Opens In
+              </span>
+              <span className="text-lg font-mono font-extrabold text-amber-300">
+                {formattedCountdown}
+              </span>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-300">
@@ -188,7 +231,7 @@ export default function ExamInstructionsPage() {
                   3
                 </span>
                 <span>
-                  <strong>Academic Integrity:</strong> Stay in full-screen window. Leaving or switching browser tabs may trigger anomaly flags.
+                  <strong>Academic Integrity:</strong> Stay in the test window. Leaving or switching browser tabs may be logged.
                 </span>
               </li>
               <li className="flex items-start space-x-3">
@@ -196,7 +239,7 @@ export default function ExamInstructionsPage() {
                   4
                 </span>
                 <span>
-                  <strong>Final Submission:</strong> Review all answered and flagged questions before clicking Final Submit. When the timer expires, the exam auto-submits.
+                  <strong>Evaluation:</strong> Upon final submission, your responses are sealed and delivered to your instructor for evaluation.
                 </span>
               </li>
             </ul>
@@ -227,7 +270,7 @@ export default function ExamInstructionsPage() {
           </Link>
           <button
             type="button"
-            disabled={!agreementChecked || isStarting}
+            disabled={!agreementChecked || isStarting || isLocked}
             onClick={handleStartExam}
             className="px-6 py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-lg shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-2"
           >
@@ -236,6 +279,8 @@ export default function ExamInstructionsPage() {
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 <span>Launching Exam...</span>
               </>
+            ) : isLocked ? (
+              <span>Locked (Opens in {formattedCountdown})</span>
             ) : (
               <span>Begin Examination &rarr;</span>
             )}

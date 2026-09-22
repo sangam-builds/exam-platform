@@ -30,7 +30,7 @@ export default function DashboardPage() {
     try {
       setIsDataLoading(true);
       const [examsList, attemptsList] = await Promise.all([
-        api.exams.findAll({ isPublished: true }),
+        api.exams.getExams({ isPublished: true }),
         api.attempts.getMyAttempts().catch(() => []),
       ]);
       setExams(examsList);
@@ -57,6 +57,7 @@ export default function DashboardPage() {
   }
 
   const attemptMap = new Map(attempts.map((a) => [a.examId, a]));
+  const now = new Date();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -73,7 +74,7 @@ export default function DashboardPage() {
               Hello, {user?.name}
             </h1>
             <p className="text-sm text-slate-400 max-w-xl">
-              Ready for your exams? Review your available tests, take assigned assessments, and view your score summaries below.
+              Review your scheduled tests, take assigned examinations, and check your submission statuses below.
             </p>
           </div>
         </div>
@@ -86,7 +87,7 @@ export default function DashboardPage() {
                 Available Examinations
               </h2>
               <p className="text-xs text-slate-400">
-                Published exams ready for you to take
+                Published exams assigned to your class
               </p>
             </div>
             <button
@@ -131,6 +132,8 @@ export default function DashboardPage() {
                   attempt &&
                   (attempt.status === 'SUBMITTED' || attempt.status === 'GRADED');
                 const isInProgress = attempt && attempt.status === 'IN_PROGRESS';
+                const isScheduledFuture =
+                  Boolean(exam.startTime && now < new Date(exam.startTime));
 
                 return (
                   <div
@@ -144,16 +147,20 @@ export default function DashboardPage() {
                         </span>
 
                         {isCompleted ? (
-                          <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold rounded-full">
-                            Completed ({attempt.score ?? 0} pts)
+                          <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold rounded-full">
+                            Submitted
                           </span>
                         ) : isInProgress ? (
-                          <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold rounded-full animate-pulse">
+                          <span className="px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-semibold rounded-full animate-pulse">
                             In Progress
                           </span>
+                        ) : isScheduledFuture ? (
+                          <span className="px-2.5 py-0.5 bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-semibold rounded-full">
+                            Scheduled ({new Date(exam.startTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                          </span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[11px] font-medium rounded-full">
-                            Not Started
+                          <span className="px-2.5 py-0.5 bg-slate-800 text-slate-400 text-[11px] font-medium rounded-full">
+                            Ready
                           </span>
                         )}
                       </div>
@@ -163,7 +170,7 @@ export default function DashboardPage() {
                       </h3>
 
                       <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                        {exam.description || 'No additional instructions provided for this exam.'}
+                        {exam.description || 'Standard timed examination.'}
                       </p>
                     </div>
 
@@ -173,7 +180,7 @@ export default function DashboardPage() {
                           href={`/exam/${exam.id}/result`}
                           className="w-full inline-flex items-center justify-center px-4 py-2.5 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl transition-colors"
                         >
-                          View Result
+                          View Submission
                         </Link>
                       ) : isInProgress ? (
                         <Link
@@ -187,7 +194,7 @@ export default function DashboardPage() {
                           href={`/exam/${exam.id}/instructions`}
                           className="w-full inline-flex items-center justify-center px-4 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/20 transition-all"
                         >
-                          Start Exam
+                          {isScheduledFuture ? 'View Schedule & Rules' : 'Start Exam'}
                         </Link>
                       )}
                     </div>
@@ -210,10 +217,9 @@ export default function DashboardPage() {
                   <thead className="bg-slate-900/80 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="p-4">Exam</th>
-                      <th className="p-4">Date</th>
-                      <th className="p-4">Score</th>
+                      <th className="p-4">Date Taken</th>
                       <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Action</th>
+                      <th className="p-4 text-right">Details</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-sans text-xs">
@@ -223,22 +229,23 @@ export default function DashboardPage() {
                           {(att as any).examTitle || 'Exam Attempt'}
                         </td>
                         <td className="p-4 text-slate-400">
-                          {new Date(att.startedAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-4 font-mono font-semibold text-indigo-400">
-                          {att.score !== undefined && att.score !== null
-                            ? `${att.score} pts`
-                            : '—'}
+                          {new Date(att.startedAt).toLocaleDateString()} at{' '}
+                          {new Date(att.startedAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </td>
                         <td className="p-4">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                               att.status === 'SUBMITTED' || att.status === 'GRADED'
                                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                             }`}
                           >
-                            {att.status}
+                            {att.status === 'SUBMITTED' || att.status === 'GRADED'
+                              ? 'Submitted'
+                              : 'In Progress'}
                           </span>
                         </td>
                         <td className="p-4 text-right">
@@ -246,7 +253,7 @@ export default function DashboardPage() {
                             href={`/exam/${att.examId}/result`}
                             className="text-indigo-400 hover:text-indigo-300 font-medium"
                           >
-                            Details &rarr;
+                            View &rarr;
                           </Link>
                         </td>
                       </tr>

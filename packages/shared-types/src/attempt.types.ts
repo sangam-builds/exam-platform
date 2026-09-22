@@ -6,9 +6,9 @@ export interface Attempt {
   examId: string;
   status: AttemptStatus;
   startedAt: string;
-  submittedAt?: string;
-  score?: number;
-  totalPoints?: number;
+  submittedAt?: string | null;
+  score?: number | null;
+  totalPoints?: number | null;
 }
 
 export interface StartAttemptDto {
@@ -71,9 +71,9 @@ export interface AttemptResult {
   examTitle: string;
   studentId: string;
   status: AttemptStatus;
-  score: number;
-  totalPoints: number;
-  percentage: number;
+  score?: number | null;
+  totalPoints?: number | null;
+  percentage?: number | null;
   startedAt: string;
   submittedAt: string;
   totalQuestions: number;
@@ -87,12 +87,47 @@ export interface AttemptResult {
   }>;
 }
 
+export interface StudentAttendanceRecord {
+  attemptId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  status: AttemptStatus;
+  startedAt: string;
+  submittedAt?: string | null;
+  score?: number | null;
+  totalPoints?: number | null;
+  percentage?: number | null;
+  answeredCount: number;
+  totalQuestions: number;
+  timeSpentSeconds: number;
+}
+
+export interface ExamAttendanceResponse {
+  exam: {
+    id: string;
+    title: string;
+    durationMinutes: number;
+    startTime?: string | null;
+    endTime?: string | null;
+    totalQuestions: number;
+    totalPoints: number;
+  };
+  totalAttended: number;
+  submittedCount: number;
+  inProgressCount: number;
+  averageScore?: number | null;
+  students: StudentAttendanceRecord[];
+}
+
 export interface StudentExamSummary {
   exam: {
     id: string;
     title: string;
     description?: string | null;
     durationMinutes: number;
+    startTime?: string | null;
+    endTime?: string | null;
     questionCount: number;
     totalPoints: number;
   };

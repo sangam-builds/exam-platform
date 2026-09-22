@@ -34,16 +34,22 @@ export class AttemptsController {
     return this.attemptsService.findStudentAttempts(req.user.id);
   }
 
+  @Get('exam/:examId/attendance')
+  @Roles(Role.TEACHER, Role.ADMIN)
+  getExamAttendance(@Param('examId') examId: string, @Request() req: any) {
+    return this.attemptsService.getExamAttendance(req.user.id, req.user.role, examId);
+  }
+
   @Get('exam/:examId')
-  @Roles(Role.STUDENT, Role.ADMIN)
+  @Roles(Role.STUDENT, Role.TEACHER, Role.ADMIN)
   getAttemptByExam(@Param('examId') examId: string, @Request() req: any) {
-    return this.attemptsService.getAttemptByExam(req.user.id, examId);
+    return this.attemptsService.getAttemptByExam(req.user.id, req.user.role, examId);
   }
 
   @Get(':id')
   @Roles(Role.STUDENT, Role.TEACHER, Role.ADMIN)
   getAttempt(@Param('id') id: string, @Request() req: any) {
-    return this.attemptsService.getAttempt(req.user.id, id);
+    return this.attemptsService.getAttempt(req.user.id, req.user.role, id);
   }
 
   @Post(':id/answers')
@@ -59,12 +65,12 @@ export class AttemptsController {
   @Post(':id/submit')
   @Roles(Role.STUDENT, Role.ADMIN)
   submitAttempt(@Param('id') id: string, @Request() req: any) {
-    return this.attemptsService.submitAttempt(req.user.id, id);
+    return this.attemptsService.submitAttempt(req.user.id, req.user.role, id);
   }
 
   @Get(':id/result')
   @Roles(Role.STUDENT, Role.TEACHER, Role.ADMIN)
   getResult(@Param('id') id: string, @Request() req: any) {
-    return this.attemptsService.getAttemptResult(req.user.id, id);
+    return this.attemptsService.getAttemptResult(req.user.id, req.user.role, id);
   }
 }

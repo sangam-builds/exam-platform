@@ -5,6 +5,7 @@ import {
   AttemptDetailResponse,
   AttemptResult,
   Attempt,
+  ExamAttendanceResponse,
 } from '@exam-platform/shared-types';
 
 export const createAttemptEndpoints = (client: AxiosInstance) => ({
@@ -40,6 +41,11 @@ export const createAttemptEndpoints = (client: AxiosInstance) => ({
 
   getMyAttempts: async (): Promise<Attempt[]> => {
     const res = await client.get<Attempt[]>('/attempts/my-attempts');
+    return res.data;
+  },
+
+  getExamAttendance: async (examId: string): Promise<ExamAttendanceResponse> => {
+    const res = await client.get<ExamAttendanceResponse>(`/attempts/exam/${examId}/attendance`);
     return res.data;
   },
 });
