@@ -6,3 +6,5 @@ export * from './topics';
 export * from './exams';
 export * from './questions';
 export * from './uploads';
+export * from './organizations';
+export * from './attempts';

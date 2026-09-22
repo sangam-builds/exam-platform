@@ -192,10 +192,17 @@ export default function TeacherDashboardPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="outline"
+                      className="text-xs h-8 px-3 bg-indigo-950/40 border-indigo-700/60 text-indigo-300 hover:bg-indigo-900/60"
+                      onClick={() => router.push(`/exams/${exam.id}/monitor`)}
+                    >
+                      📊 Results & Attendance
+                    </Button>
+                    <Button
+                      variant="outline"
                       className="text-xs h-8 px-3"
                       onClick={() => router.push(`/exams/${exam.id}/edit`)}
                     >
-                      ✏️ Edit / Questions
+                      ✏️ Edit
                     </Button>
                     <Button
                       variant={exam.isPublished ? 'secondary' : 'primary'}

@@ -12,6 +12,8 @@ import { TopicsModule } from './topics/topics.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { QuestionsModule } from './questions/questions.module';
 import { ExamsModule } from './exams/exams.module';
+import { OrganizationsModule } from './organizations/organizations.module';
+import { AttemptsModule } from './attempts/attempts.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { ExamsModule } from './exams/exams.module';
     UploadsModule,
     QuestionsModule,
     ExamsModule,
+    OrganizationsModule,
+    AttemptsModule,
   ],
 })
 export class AppModule {}
