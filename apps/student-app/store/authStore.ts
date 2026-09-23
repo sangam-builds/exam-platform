@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import { User } from '@exam-platform/shared-types';
+import { User, AuthResponse } from '@exam-platform/shared-types';
 import { api, setStoredAuth, clearStoredAuth, getStoredUser } from '../lib/apiClient';
 
+export type AuthUser = AuthResponse['user'] | User;
+
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   initialize: () => void;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -31,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, token: null, isAuthenticated: false, isLoading: false });
   },
 
-  login: (token: string, user: User) => {
+  login: (token: string, user: AuthUser) => {
     setStoredAuth(token, user);
     api.setToken(token);
     set({ user, token, isAuthenticated: true, isLoading: false });

@@ -3,10 +3,12 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, Input, Button, Badge } from '@exam-platform/ui';
-import { api, setStoredAuth } from '../../../lib/apiClient';
+import { api } from '../../../lib/apiClient';
+import { useAuthStore } from '../../../store/authStore';
 
 function SetPasswordContent() {
   const router = useRouter();
+  const { login } = useAuthStore();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -67,7 +69,7 @@ function SetPasswordContent() {
         password,
       });
 
-      setStoredAuth(authRes.accessToken, authRes.user);
+      login(authRes.accessToken, authRes.user);
       router.push('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to activate account.';
