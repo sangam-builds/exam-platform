@@ -10,3 +10,4 @@ export * from './organizations';
 export * from './attempts';
 export * from './analytics';
 export * from './integrity';
+export * from './dashboard';
