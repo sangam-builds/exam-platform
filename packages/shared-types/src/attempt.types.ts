@@ -65,6 +65,33 @@ export interface AttemptDetailResponse {
   answers: SavedAnswer[];
 }
 
+export interface TopicPerformance {
+  topicId: string;
+  topicName: string;
+  totalQuestions: number;
+  correctCount: number;
+  incorrectCount: number;
+  unansweredCount: number;
+  totalPoints: number;
+  earnedPoints: number;
+  percentage: number;
+  proficiencyLevel: 'MASTERED' | 'DEVELOPING' | 'NEEDS_FOCUS';
+  recommendation: string;
+}
+
+export interface AttemptTopicAnalytics {
+  attemptId: string;
+  examId: string;
+  examTitle: string;
+  studentId: string;
+  overallScore: number;
+  overallTotalPoints: number;
+  overallPercentage: number;
+  topics: TopicPerformance[];
+  strengths: string[];
+  weaknesses: string[];
+}
+
 export interface AttemptResult {
   attemptId: string;
   examId: string;
@@ -78,13 +105,9 @@ export interface AttemptResult {
   submittedAt: string;
   totalQuestions: number;
   answeredCount: number;
-  topicBreakdown?: Array<{
-    topicId: string;
-    topicName: string;
-    correctCount: number;
-    totalCount: number;
-    percentage: number;
-  }>;
+  topicBreakdown?: TopicPerformance[];
+  strengths?: string[];
+  weaknesses?: string[];
 }
 
 export interface StudentAttendanceRecord {

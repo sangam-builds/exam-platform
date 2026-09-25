@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { AttemptResult } from '@exam-platform/shared-types';
+import { TopicBreakdownChart } from './TopicBreakdownChart';
 
 interface ScoreSummaryProps {
   result: AttemptResult;
@@ -10,7 +11,7 @@ interface ScoreSummaryProps {
 
 export const ScoreSummary: React.FC<ScoreSummaryProps> = ({ result }) => {
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8">
       {/* Main Submission Confirmation Card */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 sm:p-10 backdrop-blur-md shadow-2xl relative overflow-hidden text-center">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-3xl opacity-20 pointer-events-none bg-emerald-500" />
@@ -98,6 +99,15 @@ export const ScoreSummary: React.FC<ScoreSummaryProps> = ({ result }) => {
           </div>
         </div>
       </div>
+
+      {/* Phase 4: Topic-wise Weakness & Strength Analysis */}
+      {result.topicBreakdown && result.topicBreakdown.length > 0 && (
+        <TopicBreakdownChart
+          topics={result.topicBreakdown}
+          strengths={result.strengths}
+          weaknesses={result.weaknesses}
+        />
+      )}
 
       {/* Action Footer */}
       <div className="flex items-center justify-center space-x-4">
