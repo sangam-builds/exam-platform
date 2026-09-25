@@ -7,3 +7,4 @@ export * from './invite.types';
 export * from './topic.types';
 export * from './organization.types';
 export * from './integrity.types';
+export * from './dashboard.types';
