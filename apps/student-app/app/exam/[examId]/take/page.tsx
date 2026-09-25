@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../../store/authStore';
 import { useExamStore } from '../../../../store/examStore';
 import { useAutosave } from '../../../../hooks/useAutosave';
 import { useTabSwitchDetection } from '../../../../hooks/useTabSwitchDetection';
+import { useFullscreen } from '../../../../hooks/useFullscreen';
 import { api } from '../../../../lib/apiClient';
 import { Timer } from '../../../../components/exam/Timer';
 import { QuestionCard } from '../../../../components/exam/QuestionCard';
@@ -47,6 +48,9 @@ export default function ExamTakingPage() {
     attemptId: attempt?.id || null,
     enabled: !!attempt && attempt.status === 'IN_PROGRESS',
   });
+
+  // Fullscreen mode management
+  const { isFullscreen, enterFullscreen } = useFullscreen();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,6 +212,23 @@ export default function ExamTakingPage() {
               )}
             </div>
 
+            {/* Fullscreen Mode Button */}
+            <button
+              type="button"
+              onClick={enterFullscreen}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors ${
+                isFullscreen
+                  ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 animate-pulse'
+              }`}
+              title={isFullscreen ? 'Full Screen Mode Active' : 'Click to Enter Full Screen'}
+            >
+              <span>{isFullscreen ? '⛶' : '⚠️'}</span>
+              <span className="hidden sm:inline">
+                {isFullscreen ? 'Full Screen' : 'Enter Full Screen'}
+              </span>
+            </button>
+
             {/* Timer */}
             <Timer
               durationMinutes={exam.durationMinutes}
@@ -350,6 +371,30 @@ export default function ExamTakingPage() {
               className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-indigo-600/20"
             >
               I Understand & Resume Exam
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Required Overlay Modal */}
+      {!isFullscreen && attempt && attempt.status === 'IN_PROGRESS' && !isTabWarningOpen && (
+        <div className="fixed inset-0 z-45 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fadeIn select-none">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-center shadow-2xl relative overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl">
+              🖥️
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-slate-100">Full Screen Mode Required</h3>
+              <p className="text-xs sm:text-sm text-slate-300">
+                To maintain examination integrity, full screen mode must remain active. Please return to full screen to continue your exam.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={enterFullscreen}
+              className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2"
+            >
+              <span>⛶ Return to Full Screen</span>
             </button>
           </div>
         </div>

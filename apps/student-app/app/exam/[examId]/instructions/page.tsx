@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useAuthStore } from '../../../../store/authStore';
 import { Header } from '../../../../components/common/Header';
 import { useScheduledCountdown } from '../../../../hooks/useScheduledCountdown';
+import { useFullscreen } from '../../../../hooks/useFullscreen';
+import { PreExamCountdownModal } from '../../../../components/exam/PreExamCountdownModal';
 import { api } from '../../../../lib/apiClient';
 import { Exam } from '@exam-platform/shared-types';
 
@@ -51,16 +53,32 @@ export default function ExamInstructionsPage() {
     }
   }, [examId, isAuthenticated]);
 
+  const { isFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
+  const [showCountdown, setShowCountdown] = useState(false);
+
   const { isLocked, formattedCountdown } = useScheduledCountdown({
     startTime: exam?.startTime,
   });
 
-  const handleStartExam = async () => {
+  const handleInitiateExam = async () => {
     if (!agreementChecked || isStarting || isLocked) return;
+    setError(null);
+    // Request fullscreen upon user gesture
+    await enterFullscreen();
+    // Open 30-second preparation countdown window
+    setShowCountdown(true);
+  };
+
+  const handleConfirmStartExam = async () => {
+    if (isStarting) return;
     setIsStarting(true);
     setError(null);
 
     try {
+      // Ensure full screen is engaged
+      if (!isFullscreen) {
+        await enterFullscreen();
+      }
       // Start or resume attempt via backend
       await api.attempts.start({ examId });
       router.push(`/exam/${examId}/take`);
@@ -69,7 +87,13 @@ export default function ExamInstructionsPage() {
       const msg = err.response?.data?.message || 'Failed to start examination. Please try again.';
       setError(msg);
       setIsStarting(false);
+      setShowCountdown(false);
     }
+  };
+
+  const handleCancelCountdown = () => {
+    setShowCountdown(false);
+    setIsStarting(false);
   };
 
   if (isLoading || isExamLoading) {
@@ -271,7 +295,7 @@ export default function ExamInstructionsPage() {
           <button
             type="button"
             disabled={!agreementChecked || isStarting || isLocked}
-            onClick={handleStartExam}
+            onClick={handleInitiateExam}
             className="px-6 py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-lg shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             {isStarting ? (
@@ -287,6 +311,19 @@ export default function ExamInstructionsPage() {
           </button>
         </div>
       </main>
+
+      {/* 30-Second Pre-Exam Countdown & Fullscreen Modal */}
+      {exam && (
+        <PreExamCountdownModal
+          isOpen={showCountdown}
+          exam={exam}
+          isFullscreen={isFullscreen}
+          onEnterFullscreen={enterFullscreen}
+          onComplete={handleConfirmStartExam}
+          onCancel={handleCancelCountdown}
+          initialSeconds={30}
+        />
+      )}
     </div>
   );
 }
