@@ -6,7 +6,8 @@ import Link from 'next/link';
 import Header from '../../../../components/common/Header';
 import { Card, Button, Badge } from '@exam-platform/ui';
 import { api, getStoredUser } from '../../../../lib/apiClient';
-import { ExamAttendanceResponse } from '@exam-platform/shared-types';
+import { ExamAttendanceResponse, ExamIntegritySummary } from '@exam-platform/shared-types';
+import IntegrityAlerts from '../../../../components/monitor/IntegrityAlerts';
 
 export default function ExamMonitorPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function ExamMonitorPage() {
   const examId = params?.examId as string;
 
   const [data, setData] = useState<ExamAttendanceResponse | null>(null);
+  const [integrityData, setIntegrityData] = useState<ExamIntegritySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,8 +24,12 @@ export default function ExamMonitorPage() {
     if (!examId) return;
     try {
       setLoading(true);
-      const res = await api.attempts.getExamAttendance(examId);
+      const [res, integrity] = await Promise.all([
+        api.attempts.getExamAttendance(examId),
+        api.integrity.getExamFlags(examId).catch(() => null),
+      ]);
       setData(res);
+      setIntegrityData(integrity);
     } catch (err: any) {
       console.error('Failed to load attendance:', err);
       setError(err.response?.data?.message || 'Failed to load student attendance roster.');
@@ -147,6 +153,13 @@ export default function ExamMonitorPage() {
             </div>
           </Card>
         </div>
+
+        {/* Anti-Cheating & Integrity Alerts */}
+        <IntegrityAlerts
+          summary={integrityData}
+          isLoading={loading}
+          onRefresh={loadAttendance}
+        />
 
         {/* Attendance & Timestamps Roster */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
