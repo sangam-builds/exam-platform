@@ -12,6 +12,7 @@ import {
   createAttemptEndpoints,
   createAnalyticsEndpoints,
   createIntegrityEndpoints,
+  createDashboardEndpoints,
 } from './endpoints';
 
 export interface ExamPlatformSdk {
@@ -28,6 +29,7 @@ export interface ExamPlatformSdk {
   attempts: ReturnType<typeof createAttemptEndpoints>;
   analytics: ReturnType<typeof createAnalyticsEndpoints>;
   integrity: ReturnType<typeof createIntegrityEndpoints>;
+  dashboard: ReturnType<typeof createDashboardEndpoints>;
   setToken: (token: string | null) => void;
 }
 
@@ -63,6 +65,7 @@ export const createSdk = (baseURL: string): ExamPlatformSdk => {
     attempts: createAttemptEndpoints(client),
     analytics: createAnalyticsEndpoints(client),
     integrity: createIntegrityEndpoints(client),
+    dashboard: createDashboardEndpoints(client),
     setToken: (token: string | null) => {
       if (token) {
         client.defaults.headers.common.Authorization = `Bearer ${token}`;
