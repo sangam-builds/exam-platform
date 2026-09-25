@@ -23,10 +23,11 @@ export const Header: React.FC = () => {
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/organizations', label: 'Organizations' },
+    { href: '/users', label: 'All Users' },
     { href: '/users/teachers', label: 'Teachers' },
     { href: '/users/students', label: 'Students' },
     { href: '/logs', label: 'Audit Logs' },
-    { href: '/settings', label: 'Settings' },
   ];
 
   return (

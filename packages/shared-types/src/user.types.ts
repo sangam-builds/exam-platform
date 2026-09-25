@@ -10,6 +10,7 @@ export interface User {
   name: string;
   role: Role;
   isActive: boolean;
+  initialPassword?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Input, Button } from '@exam-platform/ui';
-import { api, setStoredAuth } from '../../../lib/apiClient';
+import { api } from '../../../lib/apiClient';
+import { useAuthStore } from '../../../store/authStore';
 
 export default function StudentLoginPage() {
   const router = useRouter();
+  const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +26,7 @@ export default function StudentLoginPage() {
         setLoading(false);
         return;
       }
-      setStoredAuth(response.accessToken, response.user);
+      login(response.accessToken, response.user);
       router.push('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Invalid email or password';

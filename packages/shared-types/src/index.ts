@@ -5,3 +5,4 @@ export * from './question.types';
 export * from './attempt.types';
 export * from './invite.types';
 export * from './topic.types';
+export * from './organization.types';
