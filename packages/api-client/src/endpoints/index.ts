@@ -9,3 +9,4 @@ export * from './uploads';
 export * from './organizations';
 export * from './attempts';
 export * from './analytics';
+export * from './integrity';

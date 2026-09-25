@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '../../../../store/authStore';
 import { useExamStore } from '../../../../store/examStore';
 import { useAutosave } from '../../../../hooks/useAutosave';
+import { useTabSwitchDetection } from '../../../../hooks/useTabSwitchDetection';
 import { api } from '../../../../lib/apiClient';
 import { Timer } from '../../../../components/exam/Timer';
 import { QuestionCard } from '../../../../components/exam/QuestionCard';
@@ -40,6 +41,12 @@ export default function ExamTakingPage() {
 
   // Run autosave engine
   useAutosave();
+
+  // Anti-cheating: Tab switch detection
+  const { tabSwitchCount, isWarningOpen: isTabWarningOpen, dismissWarning: dismissTabWarning } = useTabSwitchDetection({
+    attemptId: attempt?.id || null,
+    enabled: !!attempt && attempt.status === 'IN_PROGRESS',
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -320,6 +327,33 @@ export default function ExamTakingPage() {
         onCancel={() => setIsSubmitModalOpen(false)}
         onConfirm={handleSubmitConfirm}
       />
+
+      {/* Anti-Cheating: Tab Switch Warning Modal */}
+      {isTabWarningOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-rose-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-center shadow-2xl relative overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-2xl">
+              ⚠️
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-slate-100">Tab Switch Detected</h3>
+              <p className="text-xs sm:text-sm text-slate-300">
+                You navigated away from your active exam window. This event has been recorded and flagged for your instructor.
+              </p>
+              <div className="inline-block px-3.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+                Recorded Switches: {tabSwitchCount}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={dismissTabWarning}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-indigo-600/20"
+            >
+              I Understand & Resume Exam
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
