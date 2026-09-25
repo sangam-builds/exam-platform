@@ -1,0 +1,17 @@
+name: Warm Server
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-health:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          echo "Pinging health endpoint to prevent cold start..."
+          curl -s --fail https://api.staging.examplatform.local/health || true

@@ -1,0 +1,22 @@
+name: Deploy Admin App (Staging)
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/admin-app/**'
+      - 'packages/**'
+      - '.github/workflows/deploy-admin-app.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Admin App to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Echo Deploy Notice
+        run: echo "Admin App staging deployment pipeline ready."

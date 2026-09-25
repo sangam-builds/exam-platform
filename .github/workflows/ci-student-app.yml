@@ -1,0 +1,43 @@
+name: CI Student App
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+    paths:
+      - 'apps/student-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-student-app.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/student-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-student-app.yml'
+
+jobs:
+  student-app-ci:
+    name: Student App Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - name: Build Student App
+        run: npm run --workspace=@exam-platform/student-app build

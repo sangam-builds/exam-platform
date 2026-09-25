@@ -1,0 +1,43 @@
+name: CI Admin App
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+    paths:
+      - 'apps/admin-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-admin-app.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/admin-app/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-admin-app.yml'
+
+jobs:
+  admin-app-ci:
+    name: Admin App Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - name: Build Admin App
+        run: npm run --workspace=@exam-platform/admin-app build
