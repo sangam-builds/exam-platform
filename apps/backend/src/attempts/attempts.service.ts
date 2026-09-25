@@ -16,9 +16,14 @@ import {
   StudentAttendanceRecord,
 } from '@exam-platform/shared-types';
 
+import { AnalyticsService } from '../analytics/analytics.service';
+
 @Injectable()
 export class AttemptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   async startAttempt(
     studentId: string,
@@ -256,7 +261,11 @@ export class AttemptsService {
       include: {
         exam: {
           include: {
-            questions: true,
+            questions: {
+              include: {
+                topic: true,
+              },
+            },
           },
         },
         answers: true,
@@ -266,6 +275,8 @@ export class AttemptsService {
     const isStudent = userRole === 'STUDENT';
     const percentage =
       totalPoints > 0 ? Math.round((totalScore / totalPoints) * 100) : 0;
+
+    const topicAnalytics = this.analyticsService.calculateTopicBreakdown(updatedAttempt);
 
     return {
       attemptId: updatedAttempt.id,
@@ -282,6 +293,9 @@ export class AttemptsService {
       answeredCount: updatedAttempt.answers.filter(
         (a) => a.selectedAnswer || a.textAnswer,
       ).length,
+      topicBreakdown: topicAnalytics.topics,
+      strengths: topicAnalytics.strengths,
+      weaknesses: topicAnalytics.weaknesses,
     };
   }
 
@@ -295,7 +309,11 @@ export class AttemptsService {
       include: {
         exam: {
           include: {
-            questions: true,
+            questions: {
+              include: {
+                topic: true,
+              },
+            },
           },
         },
         answers: true,
@@ -319,6 +337,8 @@ export class AttemptsService {
     const percentage =
       totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
 
+    const topicAnalytics = this.analyticsService.calculateTopicBreakdown(attempt);
+
     return {
       attemptId: attempt.id,
       examId: attempt.examId,
@@ -334,6 +354,9 @@ export class AttemptsService {
       answeredCount: attempt.answers.filter(
         (a) => a.selectedAnswer || a.textAnswer,
       ).length,
+      topicBreakdown: topicAnalytics.topics,
+      strengths: topicAnalytics.strengths,
+      weaknesses: topicAnalytics.weaknesses,
     };
   }
 

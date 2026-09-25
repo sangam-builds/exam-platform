@@ -10,6 +10,7 @@ import {
   createUploadEndpoints,
   createOrganizationEndpoints,
   createAttemptEndpoints,
+  createAnalyticsEndpoints,
 } from './endpoints';
 
 export interface ExamPlatformSdk {
@@ -24,6 +25,7 @@ export interface ExamPlatformSdk {
   uploads: ReturnType<typeof createUploadEndpoints>;
   organizations: ReturnType<typeof createOrganizationEndpoints>;
   attempts: ReturnType<typeof createAttemptEndpoints>;
+  analytics: ReturnType<typeof createAnalyticsEndpoints>;
   setToken: (token: string | null) => void;
 }
 
@@ -57,6 +59,7 @@ export const createSdk = (baseURL: string): ExamPlatformSdk => {
     uploads: createUploadEndpoints(client),
     organizations: createOrganizationEndpoints(client),
     attempts: createAttemptEndpoints(client),
+    analytics: createAnalyticsEndpoints(client),
     setToken: (token: string | null) => {
       if (token) {
         client.defaults.headers.common.Authorization = `Bearer ${token}`;
